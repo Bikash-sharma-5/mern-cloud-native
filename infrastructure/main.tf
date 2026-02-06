@@ -21,10 +21,13 @@ provider "helm" {
 
 resource "kubernetes_namespace_v1" "mern_ns" {
   metadata { name = "mern-stack" }
+  # Prevents "already exists" errors during re-runs
+  lifecycle { ignore_changes = [metadata] }
 }
 
 resource "kubernetes_namespace_v1" "monitoring_ns" {
   metadata { name = "monitoring" }
+  lifecycle { ignore_changes = [metadata] }
 }
 
 # --- 2. MONGODB DATABASE ---
@@ -61,10 +64,11 @@ resource "kubernetes_service_v1" "mongodb_service" {
       port        = 27017
       target_port = 27017
     }
+    type = "ClusterIP"
   }
 }
 
-# --- 3. MERN APPLICATION (Frontend & Backend) ---
+# --- 3. MERN APPLICATION ---
 
 resource "kubernetes_deployment_v1" "mern_app" {
   depends_on = [kubernetes_deployment_v1.mongodb]
@@ -117,7 +121,7 @@ resource "kubernetes_service_v1" "mern_service" {
   }
 }
 
-# --- 4. MONITORING (Prometheus & Grafana) ---
+# --- 4. MONITORING ---
 
 resource "helm_release" "prometheus" {
   name       = "prometheus"
