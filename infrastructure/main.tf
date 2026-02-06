@@ -6,25 +6,28 @@ terraform {
 }
 
 provider "kubernetes" {
-  config_path = "~/.kube/config" # Connects to Docker Desktop K8s
+  config_path = "/var/jenkins_home/.kube/config"
 }
 
 provider "helm" {
+  # The fix: This should be an assignment, not a block
   kubernetes {
-    config_path = "~/.kube/config"
+    config_path = "/var/jenkins_home/.kube/config"
   }
 }
 
-# 1. Create a Namespace for your App
-resource "kubernetes_namespace" "mern_ns" {
-  metadata { name = "mern-stack" }
+# Use namespace_v1 to avoid the deprecation warning
+resource "kubernetes_namespace_v1" "mern_ns" {
+  metadata {
+    name = "mern-stack"
+  }
 }
 
-# 2. Deploy the Backend & Frontend in one Pod (simplest for local dev)
-resource "kubernetes_deployment" "mern_app" {
+# MERN App Deployment
+resource "kubernetes_deployment_v1" "mern_app" {
   metadata {
     name      = "mern-app"
-    namespace = kubernetes_namespace.mern_ns.metadata[0].name
+    namespace = kubernetes_namespace_v1.mern_ns.metadata[0].name
   }
   spec {
     replicas = 1
@@ -47,7 +50,7 @@ resource "kubernetes_deployment" "mern_app" {
   }
 }
 
-# 3. Install Prometheus (via Helm)
+# Monitoring: Prometheus
 resource "helm_release" "prometheus" {
   name             = "prometheus"
   repository       = "https://prometheus-community.github.io/helm-charts"
@@ -56,7 +59,7 @@ resource "helm_release" "prometheus" {
   create_namespace = true
 }
 
-# 4. Install Grafana (via Helm)
+# Monitoring: Grafana
 resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
