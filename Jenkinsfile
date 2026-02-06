@@ -2,10 +2,7 @@ pipeline {
     agent any
 
     // This ensures Jenkins uses the Docker CLI tool we configured in Global Tools
-    tools {
-        dockerTool 'docker' 
-    }
-
+ 
     environment {
         DOCKER_USER = 'sharmajikechhotebete'
         BACKEND_IMAGE = "${DOCKER_USER}/mern-backend:latest"
