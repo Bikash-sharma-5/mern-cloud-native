@@ -10,20 +10,20 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  # The fix: This should be an assignment, not a block
-  kubernetes {
+  # FIX: Use the equals sign (=) here instead of just a block
+  kubernetes = {
     config_path = "/var/jenkins_home/.kube/config"
   }
 }
 
-# Use namespace_v1 to avoid the deprecation warning
+# Use namespace_v1 for clean code
 resource "kubernetes_namespace_v1" "mern_ns" {
   metadata {
     name = "mern-stack"
   }
 }
 
-# MERN App Deployment
+# MERN App Deployment using v1
 resource "kubernetes_deployment_v1" "mern_app" {
   metadata {
     name      = "mern-app"
