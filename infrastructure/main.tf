@@ -7,6 +7,7 @@ terraform {
 
 provider "kubernetes" {
   config_path = "/var/jenkins_home/.kube/config"
+  insecure    = true
 }
 
 provider "helm" {
