@@ -1,7 +1,6 @@
 pipeline {
     agent any
 
-    // This ensures Jenkins uses the Docker CLI tool we configured in Global Tools
     tools {
         dockerTool 'docker' 
     }
@@ -22,7 +21,6 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                // Pulls code from the Git repo configured in the Jenkins Job
                 checkout scm
             }
         }
@@ -42,7 +40,6 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // 'dockerhub-auth' is the ID we just set in Jenkins Credentials
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                         sh "echo ${PASS} | docker login -u ${USER} --password-stdin"
                         sh "docker push ${BACKEND_IMAGE}"
@@ -51,11 +48,26 @@ pipeline {
                 }
             }
         }
+
+        stage('CD: Terraform Deploy & Monitoring') {
+            steps {
+                dir('infrastructure') {
+                    script {
+                        echo "Initializing Terraform..."
+                        sh "terraform init"
+                        echo "Deploying MERN Stack + Prometheus + Grafana..."
+                        sh "terraform apply -auto-approve"
+                    }
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo "Successfully pushed images to https://hub.docker.com/u/${DOCKER_USER}"
+            echo "CI/CD Pipeline Successful!"
+            echo "App deployed to Kubernetes."
+            echo "Monitoring active (Prometheus/Grafana)."
         }
         failure {
             echo "Build failed. Check Console Output for errors."
