@@ -10,20 +10,17 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  # FIX: Use the equals sign (=) here instead of just a block
   kubernetes = {
     config_path = "/var/jenkins_home/.kube/config"
   }
 }
 
-# Use namespace_v1 for clean code
+# 1. Create Namespace
 resource "kubernetes_namespace_v1" "mern_ns" {
-  metadata {
-    name = "mern-stack"
-  }
+  metadata { name = "mern-stack" }
 }
 
-# MERN App Deployment using v1
+# 2. MERN App Deployment
 resource "kubernetes_deployment_v1" "mern_app" {
   metadata {
     name      = "mern-app"
@@ -50,7 +47,7 @@ resource "kubernetes_deployment_v1" "mern_app" {
   }
 }
 
-# Monitoring: Prometheus
+# 3. Prometheus
 resource "helm_release" "prometheus" {
   name             = "prometheus"
   repository       = "https://prometheus-community.github.io/helm-charts"
@@ -59,7 +56,7 @@ resource "helm_release" "prometheus" {
   create_namespace = true
 }
 
-# Monitoring: Grafana
+# 4. Grafana
 resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
