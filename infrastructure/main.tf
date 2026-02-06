@@ -20,23 +20,13 @@ provider "helm" {
 # --- 1. NAMESPACES ---
 
 resource "kubernetes_namespace_v1" "mern_ns" {
-  metadata {
-    name = "mern-stack"
-  }
-  # ADD THIS BLOCK
-  lifecycle {
-    ignore_changes = all
-  }
+  metadata { name = "mern-stack" }
+  lifecycle { ignore_changes = [metadata] }
 }
 
 resource "kubernetes_namespace_v1" "monitoring_ns" {
-  metadata {
-    name = "monitoring"
-  }
-  # ADD THIS BLOCK
-  lifecycle {
-    ignore_changes = all
-  }
+  metadata { name = "monitoring" }
+  lifecycle { ignore_changes = [metadata] }
 }
 # --- 2. MONGODB DATABASE ---
 
