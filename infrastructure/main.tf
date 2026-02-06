@@ -17,7 +17,7 @@ provider "helm" {
   }
 }
 
-# --- NAMESPACES ---
+# --- 1. NAMESPACES ---
 
 resource "kubernetes_namespace_v1" "mern_ns" {
   metadata { name = "mern-stack" }
@@ -27,9 +27,47 @@ resource "kubernetes_namespace_v1" "monitoring_ns" {
   metadata { name = "monitoring" }
 }
 
-# --- MERN APP ---
+# --- 2. MONGODB DATABASE ---
+
+resource "kubernetes_deployment_v1" "mongodb" {
+  metadata {
+    name      = "mongodb"
+    namespace = kubernetes_namespace_v1.mern_ns.metadata[0].name
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "mongodb" } }
+    template {
+      metadata { labels = { app = "mongodb" } }
+      spec {
+        container {
+          name  = "mongodb"
+          image = "mongo:latest"
+          port { container_port = 27017 }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service_v1" "mongodb_service" {
+  metadata {
+    name      = "mongodb-service"
+    namespace = kubernetes_namespace_v1.mern_ns.metadata[0].name
+  }
+  spec {
+    selector = { app = "mongodb" }
+    port {
+      port        = 27017
+      target_port = 27017
+    }
+  }
+}
+
+# --- 3. MERN APPLICATION (Frontend & Backend) ---
 
 resource "kubernetes_deployment_v1" "mern_app" {
+  depends_on = [kubernetes_deployment_v1.mongodb]
   metadata {
     name      = "mern-app"
     namespace = kubernetes_namespace_v1.mern_ns.metadata[0].name
@@ -44,7 +82,10 @@ resource "kubernetes_deployment_v1" "mern_app" {
           name  = "backend"
           image = "sharmajikechhotebete/mern-backend:latest"
           port { container_port = 5000 }
-          # Add a placeholder env var to prevent crash if your code expects one
+          env {
+            name  = "MONGO_URI"
+            value = "mongodb://mongodb-service:27017/mern_db"
+          }
           env {
             name  = "NODE_ENV"
             value = "production"
@@ -60,7 +101,6 @@ resource "kubernetes_deployment_v1" "mern_app" {
   }
 }
 
-# Service to access the app
 resource "kubernetes_service_v1" "mern_service" {
   metadata {
     name      = "mern-service"
@@ -73,18 +113,17 @@ resource "kubernetes_service_v1" "mern_service" {
       port        = 80
       target_port = 80
     }
-    type = "NodePort"
+    type = "LoadBalancer"
   }
 }
 
-# --- MONITORING ---
+# --- 4. MONITORING (Prometheus & Grafana) ---
 
 resource "helm_release" "prometheus" {
   name       = "prometheus"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "prometheus"
   namespace  = kubernetes_namespace_v1.monitoring_ns.metadata[0].name
-  # No create_namespace here, we use the resource above
 }
 
 resource "helm_release" "grafana" {
@@ -92,7 +131,5 @@ resource "helm_release" "grafana" {
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
   namespace  = kubernetes_namespace_v1.monitoring_ns.metadata[0].name
-  
-  # Ensure Prometheus is installed before starting Grafana
   depends_on = [helm_release.prometheus]
 }
